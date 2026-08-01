@@ -30,19 +30,22 @@ MEDIA_MIME_TYPES = [
 ]
 
 
-def _build_mime_query() -> str:
-    """Build a Drive API query to find media files."""
-    clauses = [f"mimeType='{mt}'" for mt in MEDIA_MIME_TYPES]
-    return f"({' or '.join(clauses)}) and trashed=false"
+def _build_mime_query(images_only: bool = False) -> str:
+    """Build a Drive API query to find media files owned by the user."""
+    types = [mt for mt in MEDIA_MIME_TYPES if not images_only or mt.startswith("image/")]
+    clauses = [f"mimeType='{mt}'" for mt in types]
+    return f"({' or '.join(clauses)}) and trashed=false and 'me' in owners"
 
 
-def list_media_items(account_label: str, max_items: int = 500) -> list[MediaItem]:
+def list_media_items(
+    account_label: str, max_items: int = 500, images_only: bool = False
+) -> list[MediaItem]:
     """List media items from Google Drive, sorted by size (largest first)."""
     service = get_drive_service(account_label)
     items = []
     page_token = None
 
-    query = _build_mime_query()
+    query = _build_mime_query(images_only=images_only)
     fields = "nextPageToken, files(id, name, mimeType, size, createdTime, imageMediaMetadata)"
 
     with Progress() as progress:
@@ -103,11 +106,15 @@ def download_media(item: MediaItem, download_dir: Path | None = None) -> Path:
     request = service.files().get_media(fileId=item.id)
 
     local_path = download_dir / item.filename
+    chunk_size = 50 * 1024 * 1024  # 50 MB chunks
     with open(local_path, "wb") as f:
-        downloader = MediaIoBaseDownload(f, request)
+        downloader = MediaIoBaseDownload(f, request, chunksize=chunk_size)
         done = False
         while not done:
-            _, done = downloader.next_chunk()
+            status, done = downloader.next_chunk(num_retries=5)
+            if status and item.file_size_bytes and item.file_size_bytes > 100_000_000:
+                pct = int(status.progress() * 100)
+                console.print(f"{pct}%...", end=" ")
 
     return local_path
 

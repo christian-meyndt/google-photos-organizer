@@ -10,7 +10,7 @@ load_dotenv()
 class Config(BaseModel):
     client_secrets_file: Path = Path(os.getenv("GOOGLE_CLIENT_SECRETS_FILE", "credentials.json"))
     output_dir: Path = Path(os.getenv("OUTPUT_DIR", str(Path.home() / "Pictures" / "Organized")))
-    ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.2-vision")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "llava")
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     min_file_size_bytes: int = int(os.getenv("MIN_FILE_SIZE_BYTES", "500000"))
     min_resolution_width: int = int(os.getenv("MIN_RESOLUTION_WIDTH", "640"))

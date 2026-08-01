@@ -37,6 +37,7 @@ class PipelineState(BaseModel):
     errors: list[str] = []
     dry_run: bool = True
     max_items_per_account: int = 100
+    images_only: bool = False
 
 
 def fetch_node(state: PipelineState) -> dict:
@@ -51,7 +52,9 @@ def fetch_node(state: PipelineState) -> dict:
                 f"  [dim]{account}: {_format_bytes(usage['used'])} / "
                 f"{_format_bytes(usage['total'])} used[/]"
             )
-            items = list_media_items(account, max_items=state.max_items_per_account)
+            items = list_media_items(
+                account, max_items=state.max_items_per_account, images_only=state.images_only
+            )
             all_items.extend(items)
             total_size = sum(i.file_size_bytes or 0 for i in items)
             console.print(

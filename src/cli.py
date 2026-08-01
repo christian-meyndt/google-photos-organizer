@@ -7,6 +7,7 @@ from rich.console import Console
 
 from .config import config
 from .workflow import PipelineState, build_workflow
+from .takeout_workflow import TakeoutState, build_takeout_workflow
 
 app = typer.Typer(
     name="photos-organizer",
@@ -30,6 +31,11 @@ def run(
         "--execute",
         help="Actually move files and trash from Google Drive (default is dry run)",
     ),
+    images_only: bool = typer.Option(
+        False,
+        "--images-only",
+        help="Skip videos, only process image files",
+    ),
 ):
     """Run the photo organization pipeline."""
     console.print("[bold]Google Drive Photos Organizer[/]\n")
@@ -45,6 +51,60 @@ def run(
         accounts=account_list,
         max_items_per_account=max_items,
         dry_run=not execute,
+        images_only=images_only,
+    )
+
+    workflow.invoke(initial_state)
+
+
+@app.command()
+def takeout(
+    accounts: str = typer.Option(
+        os.getenv("ACCOUNTS", "christian,wife"),
+        help="Comma-separated account labels to process",
+    ),
+    execute: bool = typer.Option(
+        False,
+        "--execute",
+        help="Actually process files and trash ZIPs from Drive (default is dry run)",
+    ),
+    images_only: bool = typer.Option(
+        False,
+        "--images-only",
+        help="Skip videos, only process image files",
+    ),
+    max_items: int = typer.Option(
+        None,
+        help="Maximum media files to process (default: all)",
+    ),
+):
+    """Process Google Takeout exports stored in Google Drive.
+
+    Finds Takeout ZIP files in Drive, downloads and extracts them,
+    deduplicates and classifies the photos/videos, organizes them
+    locally, then trashes the ZIPs from Drive to free space.
+
+    Steps to use:
+      1. Go to takeout.google.com
+      2. Select only 'Google Photos'
+      3. Choose delivery: 'Add to Drive'
+      4. Wait for export to complete
+      5. Run: photos-organizer takeout --execute
+    """
+    console.print("[bold]Google Takeout Photos Processor[/]\n")
+
+    if not execute:
+        console.print("[yellow]Running in DRY RUN mode. Use --execute to apply changes.[/]\n")
+
+    account_list = [a.strip() for a in accounts.split(",")]
+
+    workflow = build_takeout_workflow()
+
+    initial_state = TakeoutState(
+        accounts=account_list,
+        dry_run=not execute,
+        images_only=images_only,
+        max_items=max_items,
     )
 
     workflow.invoke(initial_state)

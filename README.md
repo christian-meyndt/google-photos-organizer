@@ -86,16 +86,18 @@ The biggest difference: LangGraph workflows can **pause, ask for input, and resu
 
 ```
 src/
-├── workflow.py      # LangGraph graph definition — start here
-├── cli.py           # CLI entry point (Typer)
-├── fetcher.py       # Google Drive API integration
-├── quality.py       # Deterministic quality checks (OpenCV)
-├── dedup.py         # Perceptual hashing for duplicate detection
-├── classifier.py    # LLM-powered classification (Ollama)
-├── organizer.py     # File system organization + folder summaries
-├── models.py        # Pydantic data models
-├── config.py        # Environment configuration
-└── google_auth.py   # OAuth2 multi-account auth
+├── workflow.py          # LangGraph graph — Drive direct workflow
+├── takeout_workflow.py  # LangGraph graph — Takeout export workflow
+├── takeout.py           # Takeout ZIP discovery, download, extraction
+├── cli.py               # CLI entry point (Typer)
+├── fetcher.py           # Google Drive API integration
+├── quality.py           # Deterministic quality checks (OpenCV)
+├── dedup.py             # Perceptual hashing for duplicate detection
+├── classifier.py        # LLM-powered classification (Ollama)
+├── organizer.py         # File system organization + folder summaries
+├── models.py            # Pydantic data models
+├── config.py            # Environment configuration
+└── google_auth.py       # OAuth2 multi-account auth
 ```
 
 ## Concepts to Explore Further
@@ -119,7 +121,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 
 # Set up Ollama (local vision model — free, private)
-ollama pull llama3.2-vision
+ollama pull llava
 
 # Authenticate Google accounts
 photos-organizer auth christian
@@ -128,11 +130,12 @@ photos-organizer auth wife
 # Check storage usage
 photos-organizer storage
 
-# Dry run (shows what would happen)
-photos-organizer run
-
-# Execute for real
+# Process files directly in Drive
 photos-organizer run --execute
+
+# Process Google Photos via Takeout export
+# (first: takeout.google.com → Google Photos → deliver to Drive)
+photos-organizer takeout --execute
 ```
 
 ## Tech Stack
@@ -140,8 +143,9 @@ photos-organizer run --execute
 | Component | Role | Why |
 |-----------|------|-----|
 | **LangGraph** | Workflow orchestration | Graph-based, typed state, supports cycles and human-in-the-loop |
-| **Ollama + llama3.2-vision** | Image classification | Runs locally, no API costs, no data leaves your machine |
+| **Ollama + LLaVA** | Image classification | Runs locally, no API costs, no data leaves your machine |
 | **Google Drive API** | Media source + deletion | List, download, and trash files from multiple accounts |
+| **Google Takeout** | Google Photos export | Only viable way to bulk-access Google Photos (API deprecated March 2025) |
 | **imagehash** | Duplicate detection | Perceptual hashing catches near-duplicates (crops, resizes) |
 | **OpenCV** | Quality assessment | Laplacian variance for blur detection |
 | **Pydantic** | Data modeling | Typed state, validation, serialization |
