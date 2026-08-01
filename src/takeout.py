@@ -105,7 +105,8 @@ def download_and_extract_takeout(
 
 
 def _get_creation_time(media_path: Path) -> datetime:
-    """Get creation time from companion JSON metadata or file stats."""
+    """Get creation time from companion JSON metadata, filename, or file stats."""
+    # Try companion JSON (Takeout puts metadata as filename.ext.json)
     json_candidates = [
         media_path.with_suffix(media_path.suffix + ".json"),
         media_path.parent / (media_path.stem + ".json"),
@@ -121,6 +122,30 @@ def _get_creation_time(media_path: Path) -> datetime:
             except (json.JSONDecodeError, ValueError, OSError):
                 pass
 
+    # Try parsing date from filename (IMG_20240730_191216, VID_20241109_123057, etc.)
+    import re
+    patterns = [
+        r"(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})",  # 20240730_191216
+        r"(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})",  # 2024-07-30-19-12-16
+        r"(\d{4})-(\d{2})-(\d{2})",  # 2024-07-30
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, media_path.stem)
+        if match:
+            groups = match.groups()
+            try:
+                if len(groups) == 6:
+                    return datetime(
+                        int(groups[0]), int(groups[1]), int(groups[2]),
+                        int(groups[3]), int(groups[4]), int(groups[5])
+                    )
+                elif len(groups) == 3:
+                    return datetime(int(groups[0]), int(groups[1]), int(groups[2]))
+            except ValueError:
+                continue
+
+    # Last resort: file modification time
     return datetime.fromtimestamp(media_path.stat().st_mtime)
 
 
