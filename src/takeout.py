@@ -46,16 +46,17 @@ def find_takeout_zips(account_label: str) -> list[MediaItem]:
 
     query = (
         "(name contains 'takeout' or name contains 'Takeout') "
-        "and mimeType='application/zip' "
+        "and (mimeType='application/zip' or mimeType='application/x-zip' "
+        "or mimeType='application/x-zip-compressed') "
         "and trashed=false "
         "and 'me' in owners"
     )
 
     results = service.files().list(
         q=query,
-        pageSize=50,
+        pageSize=100,
         fields="files(id, name, size, createdTime)",
-        orderBy="createdTime desc",
+        orderBy="name",
     ).execute()
     files = results.get("files", [])
 
