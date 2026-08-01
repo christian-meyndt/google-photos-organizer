@@ -89,19 +89,26 @@ For photos/videos that were backed up via Google Photos (the main storage consum
 
 ```bash
 # Dry run — shows what was found
-photos-organizer takeout
+photos-organizer takeout --accounts christian
 
-# Execute — download, organize, trash ZIPs from Drive
-photos-organizer takeout --execute
+# Execute — processes 3 ZIPs at a time (~6 GB), then trashes them from Drive
+photos-organizer takeout --execute --accounts christian
 
-# Images only
-photos-organizer takeout --execute --images-only
+# Process more ZIPs per run (if you have enough local disk space)
+photos-organizer takeout --execute --accounts christian --batch-size 5
 
-# Limit items processed
-photos-organizer takeout --execute --max-items 500
+# Images only (skip videos)
+photos-organizer takeout --execute --accounts christian --images-only
+
+# Re-run to process the next batch — repeat until all ZIPs are done
+photos-organizer takeout --execute --accounts christian
 ```
 
-After the tool organizes your files locally, you can safely delete them from Google Photos:
+**Note:** Takeout exports are processed in batches (default: 3 ZIPs per run, ~6 GB)
+to avoid filling your local disk. Each run trashes the processed ZIPs from Drive,
+so re-running picks up where you left off.
+
+After all batches are processed, you can safely delete photos from Google Photos:
 - Go to photos.google.com → Storage → "Review and free up space"
 
 ### Check storage

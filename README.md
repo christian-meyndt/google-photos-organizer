@@ -135,7 +135,8 @@ photos-organizer run --execute
 
 # Process Google Photos via Takeout export
 # (first: takeout.google.com → Google Photos → deliver to Drive)
-photos-organizer takeout --execute
+# Processes 3 ZIPs per run (~6 GB) — re-run to continue with next batch
+photos-organizer takeout --execute --accounts christian
 ```
 
 ## Tech Stack
