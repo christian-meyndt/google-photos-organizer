@@ -1,6 +1,6 @@
-# Google Photos Organizer — An Agentic Workflow Example
+# Google Drive Photos Organizer — An Agentic Workflow Example
 
-A practical project demonstrating how to build an **agentic AI workflow** using [LangGraph](https://github.com/langchain-ai/langgraph) for a real-world automation task: organizing, deduplicating, and classifying photos from Google Photos using a local vision model.
+A practical project demonstrating how to build an **agentic AI workflow** using [LangGraph](https://github.com/langchain-ai/langgraph) for a real-world automation task: organizing, deduplicating, and classifying photos/videos from Google Drive using a local vision model, then freeing up Drive storage.
 
 If you're a data engineer familiar with DAGs and pipeline orchestration (Airflow, Prefect, dbt) but new to agentic workflows, this project bridges that gap with a hands-on example.
 
@@ -26,18 +26,19 @@ LangGraph models workflows as **directed graphs with typed state**. If you've wo
 ```
 ┌─────────┐     ┌─────────────────────┐     ┌──────────┐
 │  Fetch  │────▶│ Download & Assess    │────▶│ Classify │
-│         │     │ (hash, blur, res)    │     │ (vision) │
+│ (Drive) │     │ (hash, blur, res)    │     │ (vision) │
 └─────────┘     └─────────────────────┘     └──────────┘
                                                   │
                                                   ▼
 ┌─────────┐     ┌──────────┐     ┌────────────────────┐
-│ Summary │◀────│  Delete  │◀────│       Decide       │
-│         │     │          │     │ (keep vs. discard) │
+│ Summary │◀────│  Trash   │◀────│       Decide       │
+│         │     │ (Drive)  │     │ (keep vs. discard) │
 └─────────┘     └──────────┘     └────────────────────┘
                                         │
                                         ▼
                                   ┌──────────┐
                                   │ Organize │
+                                  │ (local)  │
                                   └──────────┘
 ```
 
@@ -87,7 +88,7 @@ The biggest difference: LangGraph workflows can **pause, ask for input, and resu
 src/
 ├── workflow.py      # LangGraph graph definition — start here
 ├── cli.py           # CLI entry point (Typer)
-├── fetcher.py       # Google Photos API integration
+├── fetcher.py       # Google Drive API integration
 ├── quality.py       # Deterministic quality checks (OpenCV)
 ├── dedup.py         # Perceptual hashing for duplicate detection
 ├── classifier.py    # LLM-powered classification (Ollama)
@@ -114,7 +115,7 @@ See [SETUP.md](./SETUP.md) for detailed installation and configuration steps.
 Quick start:
 ```bash
 # Install
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 
 # Set up Ollama (local vision model — free, private)
@@ -123,6 +124,9 @@ ollama pull llama3.2-vision
 # Authenticate Google accounts
 photos-organizer auth christian
 photos-organizer auth wife
+
+# Check storage usage
+photos-organizer storage
 
 # Dry run (shows what would happen)
 photos-organizer run
@@ -137,7 +141,7 @@ photos-organizer run --execute
 |-----------|------|-----|
 | **LangGraph** | Workflow orchestration | Graph-based, typed state, supports cycles and human-in-the-loop |
 | **Ollama + llama3.2-vision** | Image classification | Runs locally, no API costs, no data leaves your machine |
-| **Google Photos API** | Media source | Access photos from multiple accounts |
+| **Google Drive API** | Media source + deletion | List, download, and trash files from multiple accounts |
 | **imagehash** | Duplicate detection | Perceptual hashing catches near-duplicates (crops, resizes) |
 | **OpenCV** | Quality assessment | Laplacian variance for blur detection |
 | **Pydantic** | Data modeling | Typed state, validation, serialization |
@@ -147,6 +151,8 @@ photos-organizer run --execute
 
 - **Dry run by default** — Nothing is modified without `--execute`
 - **Cheap filters first** — Hash and blur checks run before the LLM to minimize compute
-- **Deletion = trash** — 60-day recovery window in Google Photos
+- **Largest files first** — Maximizes space freed per item processed
+- **All processed files trashed from Drive** — Good files saved locally first; bad quality/duplicates discarded
+- **Deletion = trash** — 30-day recovery window in Google Drive
 - **Local inference** — No API keys, no costs, no privacy concerns
 - **Multi-account** — Handles both accounts with separate OAuth tokens
