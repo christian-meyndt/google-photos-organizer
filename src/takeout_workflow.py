@@ -46,6 +46,7 @@ class TakeoutState(BaseModel):
     dry_run: bool = True
     images_only: bool = False
     max_items: int | None = None
+    batch_size: int | None = None
     staging_dir: Path = Path("/tmp/photos-organizer-takeout")
 
 
@@ -75,6 +76,13 @@ def find_takeouts_node(state: TakeoutState) -> dict:
             "  4. Export (may take hours/days for large libraries)\n"
             "  5. Re-run this command once the export appears in Drive"
         )
+
+    if state.batch_size and len(all_zips) > state.batch_size:
+        console.print(
+            f"\n[cyan]Processing batch of {state.batch_size} / {len(all_zips)} ZIPs. "
+            f"Re-run to process the next batch.[/]"
+        )
+        all_zips = all_zips[: state.batch_size]
 
     return {"takeout_zips": all_zips, "to_delete_from_drive": all_zips}
 

@@ -75,7 +75,12 @@ def takeout(
     ),
     max_items: int = typer.Option(
         None,
-        help="Maximum media files to process (default: all)",
+        help="Maximum media files to process per ZIP (default: all)",
+    ),
+    batch_size: int = typer.Option(
+        3,
+        "--batch-size",
+        help="Number of ZIP files to process per run (default: 3, ~6 GB)",
     ),
 ):
     """Process Google Takeout exports stored in Google Drive.
@@ -84,12 +89,16 @@ def takeout(
     deduplicates and classifies the photos/videos, organizes them
     locally, then trashes the ZIPs from Drive to free space.
 
+    Processes ZIPs in batches (default: 3 at a time) to avoid filling
+    local disk. Re-run to process the next batch.
+
     Steps to use:
       1. Go to takeout.google.com
       2. Select only 'Google Photos'
       3. Choose delivery: 'Add to Drive'
       4. Wait for export to complete
       5. Run: photos-organizer takeout --execute
+      6. Repeat step 5 until all ZIPs are processed
     """
     console.print("[bold]Google Takeout Photos Processor[/]\n")
 
@@ -105,6 +114,7 @@ def takeout(
         dry_run=not execute,
         images_only=images_only,
         max_items=max_items,
+        batch_size=batch_size,
     )
 
     workflow.invoke(initial_state)
