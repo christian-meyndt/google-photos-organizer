@@ -1,4 +1,4 @@
-"""CLI interface for the Google Photos Organizer."""
+"""CLI interface for the Google Drive Photos Organizer."""
 
 import os
 
@@ -10,7 +10,7 @@ from .workflow import PipelineState, build_workflow
 
 app = typer.Typer(
     name="photos-organizer",
-    help="Organize, deduplicate, and classify Google Photos using local AI.",
+    help="Organize, deduplicate, and classify photos/videos from Google Drive using local AI.",
 )
 console = Console()
 
@@ -23,16 +23,16 @@ def run(
     ),
     max_items: int = typer.Option(
         100,
-        help="Maximum items to fetch per account",
+        help="Maximum items to fetch per account (sorted by size, largest first)",
     ),
     execute: bool = typer.Option(
         False,
         "--execute",
-        help="Actually move files and delete from Google Photos (default is dry run)",
+        help="Actually move files and trash from Google Drive (default is dry run)",
     ),
 ):
     """Run the photo organization pipeline."""
-    console.print("[bold]Google Photos Organizer[/]\n")
+    console.print("[bold]Google Drive Photos Organizer[/]\n")
 
     if not execute:
         console.print("[yellow]Running in DRY RUN mode. Use --execute to apply changes.[/]\n")
@@ -62,11 +62,43 @@ def auth(
 
     try:
         get_credentials(account)
-        console.print(f"[green]✓ Successfully authenticated '{account}'[/]")
+        console.print(f"[green]OK[/] Successfully authenticated '{account}'")
         console.print(f"  Token saved to: {config.token_dir}/token_{account}.json")
     except Exception as e:
-        console.print(f"[red]✗ Authentication failed: {e}[/]")
+        console.print(f"[red]FAILED[/] Authentication failed: {e}")
         raise typer.Exit(1)
+
+
+@app.command()
+def storage(
+    accounts: str = typer.Option(
+        os.getenv("ACCOUNTS", "christian,wife"),
+        help="Comma-separated account labels",
+    ),
+):
+    """Show storage usage for each Google Drive account."""
+    from .fetcher import get_storage_usage
+
+    account_list = [a.strip() for a in accounts.split(",")]
+
+    for account in account_list:
+        try:
+            usage = get_storage_usage(account)
+            total = usage["total"]
+            used = usage["used"]
+            pct = (used / total * 100) if total else 0
+
+            bar_len = 30
+            filled = int(bar_len * pct / 100)
+            bar = "[green]" + "=" * filled + "[/]" + "-" * (bar_len - filled)
+
+            console.print(f"\n[bold]{account}[/]")
+            console.print(f"  [{bar}] {pct:.1f}%")
+            console.print(f"  Used: {used / 1_073_741_824:.2f} GB / {total / 1_073_741_824:.0f} GB")
+            console.print(f"  In trash: {usage['used_in_trash'] / 1_048_576:.0f} MB")
+        except Exception as e:
+            console.print(f"\n[bold]{account}[/]")
+            console.print(f"  [red]Error: {e}[/]")
 
 
 @app.command()
@@ -87,7 +119,7 @@ def status():
         if tokens:
             for t in tokens:
                 label = t.stem.replace("token_", "")
-                console.print(f"  [green]✓[/] {label}")
+                console.print(f"  [green]OK[/] {label}")
         else:
             console.print("  [yellow]No accounts authenticated yet.[/]")
     else:
@@ -100,15 +132,15 @@ def status():
         if resp.ok:
             models = [m["name"] for m in resp.json().get("models", [])]
             if config.ollama_model in models or any(config.ollama_model in m for m in models):
-                console.print(f"  [green]✓[/] Ollama running, model '{config.ollama_model}' available")
+                console.print(f"  [green]OK[/] Ollama running, model '{config.ollama_model}' available")
             else:
-                console.print(f"  [yellow]⚠[/] Ollama running but model '{config.ollama_model}' not found")
+                console.print(f"  [yellow]![/] Ollama running but model '{config.ollama_model}' not found")
                 console.print(f"    Available: {', '.join(models[:5])}")
                 console.print(f"    Run: ollama pull {config.ollama_model}")
         else:
-            console.print("  [red]✗[/] Ollama not responding")
+            console.print("  [red]X[/] Ollama not responding")
     except Exception:
-        console.print("  [red]✗[/] Ollama not running. Start with: ollama serve")
+        console.print("  [red]X[/] Ollama not running. Start with: ollama serve")
 
 
 if __name__ == "__main__":

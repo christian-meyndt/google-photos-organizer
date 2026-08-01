@@ -1,6 +1,4 @@
-"""Google Photos API authentication for multiple accounts."""
-
-from pathlib import Path
+"""Google Drive API authentication for multiple accounts."""
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -10,8 +8,7 @@ from googleapiclient.discovery import build
 from .config import config
 
 SCOPES = [
-    "https://www.googleapis.com/auth/photoslibrary.readonly",
-    "https://www.googleapis.com/auth/photoslibrary.edit.mediaItems",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 
@@ -37,7 +34,7 @@ def get_credentials(account_label: str) -> Credentials:
     return creds
 
 
-def get_photos_service(account_label: str):
-    """Build Google Photos API service for an account."""
+def get_drive_service(account_label: str):
+    """Build Google Drive API service for an account."""
     creds = get_credentials(account_label)
-    return build("photoslibrary", "v1", credentials=creds, static_discovery=False)
+    return build("drive", "v3", credentials=creds)
